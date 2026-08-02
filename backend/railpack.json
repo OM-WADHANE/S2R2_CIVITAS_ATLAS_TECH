@@ -1,0 +1,11 @@
+{
+  "phases": {
+    "install": {
+      "cmds": ["npm ci"]
+    },
+    "build": {
+      "cmds": ["npx prisma generate"]
+    }
+  },
+  "start": "node server.js"
+}

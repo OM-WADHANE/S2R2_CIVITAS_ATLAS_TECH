@@ -1,0 +1,199 @@
+// src/routes/clients.js
+"use strict";
+
+const express = require("express");
+const { requireAuth } = require("../middleware/auth");
+
+const router = express.Router();
+
+async function logActivity(prisma, username, module, label, action) {
+  await prisma.activityLog.create({
+    data: { module, label, action, username },
+  });
+}
+
+// GET /api/clients?search=&status=
+router.get("/", requireAuth, async (req, res, next) => {
+  try {
+    const { search, status } = req.query;
+    const where = {};
+    if (search) where.OR = [
+      { clientName:  { contains: search, mode: "insensitive" } },
+      { companyName: { contains: search, mode: "insensitive" } },
+      { email:       { contains: search, mode: "insensitive" } },
+      { phone:       { contains: search, mode: "insensitive" } },
+      { address:     { contains: search, mode: "insensitive" } },
+    ];
+    if (status) where.status = status.toUpperCase();
+
+    const clients = await req.prisma.client.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+    });
+    res.json({ clients });
+  } catch (err) { next(err); }
+});
+
+// GET /api/clients/:id  — must be before /export/pdf to avoid conflict
+router.get("/:id(\\d+)", requireAuth, async (req, res, next) => {
+  try {
+    const client = await req.prisma.client.findUniqueOrThrow({
+      where: { id: Number(req.params.id) },
+    });
+    res.json(client);
+  } catch (err) { next(err); }
+});
+
+// POST /api/clients
+router.post("/", requireAuth, async (req, res, next) => {
+  try {
+    const { clientName, companyName, phone, email, address, gstNo, status } = req.body;
+    const client = await req.prisma.client.create({
+      data: {
+        clientName, companyName, phone, email, address, gstNo,
+        status: (status || "ACTIVE").toUpperCase(),
+      },
+    });
+    await logActivity(req.prisma, req.user.username, "client", client.clientName, "created");
+    res.status(201).json(client);
+  } catch (err) { next(err); }
+});
+
+// PUT /api/clients/:id
+router.put("/:id", requireAuth, async (req, res, next) => {
+  try {
+    const id   = Number(req.params.id);
+    const data = {};
+    const fields = ["clientName","companyName","phone","email","address","gstNo","status"];
+    for (const f of fields) {
+      if (req.body[f] !== undefined) {
+        data[f] = f === "status" ? req.body[f].toUpperCase() : req.body[f];
+      }
+    }
+    const client = await req.prisma.client.update({ where: { id }, data });
+    await logActivity(req.prisma, req.user.username, "client", client.clientName, "updated");
+    res.json(client);
+  } catch (err) { next(err); }
+});
+
+// DELETE /api/clients/:id
+router.delete("/:id", requireAuth, async (req, res, next) => {
+  try {
+    const id     = Number(req.params.id);
+    const client = await req.prisma.client.delete({ where: { id } });
+    await logActivity(req.prisma, req.user.username, "client", client.clientName, "deleted");
+    res.json({ message: "Deleted", id });
+  } catch (err) { next(err); }
+});
+
+// POST /api/clients/import — bulk import from Excel/CSV (ADMIN + EDITOR)
+router.post("/import", requireAuth, async (req, res, next) => {
+  try {
+    const { rows } = req.body;
+    if (!Array.isArray(rows) || rows.length === 0)
+      return res.status(400).json({ error: "rows array is required" });
+
+    const results = { created: 0, skipped: 0, errors: [] };
+
+    for (const row of rows) {
+      const clientName = String(row["Client Name"] || row["clientName"] || row["client_name"] || "").trim();
+      if (!clientName) { results.skipped++; continue; }
+
+      try {
+        await req.prisma.client.create({
+          data: {
+            clientName,
+            companyName: String(row["Company"]      || row["companyName"]  || "").trim() || null,
+            phone:       String(row["Phone"]         || row["phone"]        || "").trim() || null,
+            email:       String(row["Email"]         || row["email"]        || "").trim() || null,
+            address:     String(row["Address"]       || row["address"]      || "").trim() || null,
+            gstNo:       String(row["GST No"]        || row["gstNo"]        || "").trim() || null,
+            status:      "ACTIVE",
+          },
+        });
+        await req.prisma.activityLog.create({
+          data: { module: "client", label: clientName, action: "created", username: req.user.username },
+        });
+        results.created++;
+      } catch (e) {
+        // Skip duplicate emails or other constraint errors
+        results.skipped++;
+        results.errors.push(`${clientName}: ${e.message}`);
+      }
+    }
+
+    res.json(results);
+  } catch (err) { next(err); }
+});
+router.get("/export/pdf", requireAuth, async (req, res, next) => {
+  try {
+    let PDFDocument;
+    try { PDFDocument = require("pdfkit"); }
+    catch {
+      return res.status(501).json({
+        error: "PDF unavailable — run `npm install pdfkit` in the backend folder.",
+      });
+    }
+
+    const clients = await req.prisma.client.findMany({ orderBy: { clientName: "asc" } });
+
+    res.setHeader("Content-Type",        "application/pdf");
+    res.setHeader("Content-Disposition", 'attachment; filename="clients.pdf"');
+
+    const doc = new PDFDocument({ margin: 40, size: "A4" });
+    doc.pipe(res);
+
+    // ── Title ──────────────────────────────────────────────────
+    doc.fontSize(18).font("Helvetica-Bold").text("S2R2 — Client List", { align: "center" });
+    doc.fontSize(9).font("Helvetica").fillColor("#666")
+      .text(`Generated: ${new Date().toLocaleString()}  |  By: ${req.user.username}`, { align: "center" });
+    doc.moveDown(1.2);
+
+    // ── Column definitions ──────────────────────────────────────
+    const cols = [
+      { label: "#",       key: "id",          w: 30  },
+      { label: "Name",    key: "clientName",  w: 110 },
+      { label: "Company", key: "companyName", w: 115 },
+      { label: "Phone",   key: "phone",       w: 85  },
+      { label: "Email",   key: "email",       w: 145 },
+      { label: "Status",  key: "status",      w: 55  },
+    ];
+    const ROW_H  = 18;
+    const startX = doc.page.margins.left;
+    const totalW = cols.reduce((s, c) => s + c.w, 0);
+
+    // Header row
+    let x = startX;
+    doc.rect(startX, doc.y, totalW, ROW_H).fill("#2563eb");
+    doc.fontSize(8).font("Helvetica-Bold");
+    cols.forEach(col => {
+      doc.fillColor("#fff").text(col.label, x + 4, doc.y - ROW_H + 4, {
+        width: col.w - 8, lineBreak: false,
+      });
+      x += col.w;
+    });
+    doc.moveDown(0.2);
+
+    // Data rows
+    doc.font("Helvetica").fontSize(7);
+    clients.forEach((client, idx) => {
+      if (doc.y > doc.page.height - doc.page.margins.bottom - ROW_H) doc.addPage();
+      const rowY  = doc.y;
+      const shade = idx % 2 === 0 ? "#f0f4ff" : "#ffffff";
+      doc.rect(startX, rowY, totalW, ROW_H).fill(shade);
+      x = startX;
+      cols.forEach(col => {
+        const val = String(client[col.key] ?? "—");
+        doc.fillColor("#111").text(val, x + 4, rowY + 5, {
+          width: col.w - 8, lineBreak: false,
+        });
+        x += col.w;
+      });
+      doc.y = rowY + ROW_H;
+    });
+
+    doc.end();
+  } catch (err) { next(err); }
+});
+
+module.exports = router;

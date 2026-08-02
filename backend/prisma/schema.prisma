@@ -1,0 +1,130 @@
+// ============================================================
+// S2R2 Inventory Management — Prisma Schema
+// Database: PostgreSQL
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")    // pooled connection (PgBouncer) — used at runtime
+  directUrl = env("DIRECT_URL")      // direct connection — used by prisma migrate / db push
+}
+
+// ── Users ────────────────────────────────────────────────────
+model User {
+  id         Int      @id @default(autoincrement())
+  username   String   @unique
+  password   String   // store bcrypt hash – never plain text
+  role       Role     @default(USER)
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt      @map("updated_at")
+
+  @@map("users")
+}
+
+enum Role {
+  ADMIN
+  EDITOR
+  VIEWER
+  USER    // legacy — treated same as VIEWER for backward compat
+}
+
+// ── Raw Materials ─────────────────────────────────────────────
+model RawMaterial {
+  id          Int      @id @default(autoincrement())
+  name        String
+  category    String
+  description String?
+  quantity    Float    @default(0)
+  unit        String   @default("pcs")
+  supplier    String?
+  location    String?
+  minStock    Float    @default(0)    @map("min_stock")
+  price       Float    @default(0)
+  lastUpdated DateTime @default(now()) @map("last_updated")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt      @map("updated_at")
+
+  // Computed status is derived in application layer
+  // (quantity == 0 → out, quantity <= minStock → low, else active)
+
+  @@map("raw_materials")
+}
+
+// ── Finished Products ─────────────────────────────────────────
+model FinishedProduct {
+  id        Int                   @id @default(autoincrement())
+  name      String
+  qty       Float                 @default(0)
+  unit      String                @default("Box")
+  category  String                @default("Finished Products")
+  price     Float                 @default(0)   // unit price in ₹
+  status    FinishedProductStatus @default(ACTIVE)
+  createdAt DateTime              @default(now()) @map("created_at")
+  updatedAt DateTime              @updatedAt      @map("updated_at")
+
+  @@map("finished_products")
+}
+
+enum FinishedProductStatus {
+  ACTIVE
+  HOLD
+}
+
+// ── Clients ───────────────────────────────────────────────────
+model Client {
+  id          Int          @id @default(autoincrement())
+  clientName  String       @map("client_name")
+  companyName String?      @map("company_name")
+  phone       String?
+  email       String?      @unique
+  address     String?
+  gstNo       String?      @map("gst_no")
+  status      ClientStatus @default(ACTIVE)
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt      @map("updated_at")
+
+  @@map("clients")
+}
+
+enum ClientStatus {
+  ACTIVE
+  INACTIVE
+}
+
+// ── IoT Devices (future extension) ───────────────────────────
+model IoTDevice {
+  id           Int             @id @default(autoincrement())
+  deviceId     String          @unique @map("device_id")
+  name         String
+  type         String?
+  location     String?
+  status       IoTDeviceStatus @default(ONLINE)
+  lastPing     DateTime?       @map("last_ping")
+  metadata     Json?           // flexible key-value payload
+  createdAt    DateTime        @default(now()) @map("created_at")
+  updatedAt    DateTime        @updatedAt      @map("updated_at")
+
+  @@map("iot_devices")
+}
+
+enum IoTDeviceStatus {
+  ONLINE
+  OFFLINE
+  MAINTENANCE
+}
+
+// ── Activity Log ──────────────────────────────────────────────
+model ActivityLog {
+  id        Int      @id @default(autoincrement())
+  module    String   // raw_material | finished_product | client | iot_device
+  label     String
+  action    String   // created | updated | deleted
+  username  String   @default("system") // who performed the action
+  eventTime DateTime @default(now()) @map("event_time")
+
+  @@map("activity_logs")
+}

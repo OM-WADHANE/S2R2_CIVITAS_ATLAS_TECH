@@ -1,0 +1,32 @@
+{
+  "name": "s2r2-inventory-frontend",
+  "version": "1.0.0",
+  "description": "S2R2 Inventory Management — Next.js Frontend",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "autoprefixer": "^10",
+    "lucide-react": "^0.383.0",
+    "next": "^14.2.35",
+    "papaparse": "^5.4.1",
+    "postcss": "^8",
+    "react": "^18",
+    "react-dom": "^18",
+    "tailwindcss": "^3",
+    "typescript": "^5",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@types/papaparse": "^5",
+    "eslint": "^8",
+    "eslint-config-next": "^14"
+  }
+}
