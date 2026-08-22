@@ -1,5 +1,8 @@
 FROM node:20-alpine
 
+# Install OpenSSL — required by Prisma query engine on Alpine
+RUN apk add --no-cache openssl libc6-compat
+
 WORKDIR /app
 
 # Copy package files and prisma schema first (better layer caching)
@@ -15,6 +18,6 @@ COPY . .
 # Expose API port
 EXPOSE 4000
 
-# Push schema to DB then start server
-# DATABASE_URL must be set as an environment variable at runtime
-CMD ["sh", "-c", "npx prisma db push --skip-generate && node server.js"]
+# Run migrations then start server
+# DATABASE_URL and DIRECT_URL must be set as environment variables at runtime
+CMD ["sh", "-c", "npx prisma migrate deploy && node server.js"]
