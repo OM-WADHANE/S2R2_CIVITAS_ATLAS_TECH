@@ -1,21 +1,26 @@
 "use client";
 // app/login/page.tsx
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { Eye, EyeOff, LogIn } from "lucide-react";
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Eye, EyeOff, LogIn, Clock } from "lucide-react";
 import { login, isLoggedIn } from "@/lib/api";
 
-export default function LoginPage() {
-  const router = useRouter();
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPwd,  setShowPwd]  = useState(false);
-  const [error,    setError]    = useState("");
-  const [loading,  setLoading]  = useState(false);
+// Wrapped in Suspense so useSearchParams works correctly in Next.js 14
+function LoginForm() {
+  const router       = useSearchParams();
+  const reason       = router.get("reason");
+  const isInactivity = reason === "inactivity";
+
+  const nav                          = useRouter();
+  const [username, setUsername]      = useState("");
+  const [password, setPassword]      = useState("");
+  const [showPwd,  setShowPwd]       = useState(false);
+  const [error,    setError]         = useState("");
+  const [loading,  setLoading]       = useState(false);
 
   useEffect(() => {
-    if (isLoggedIn()) router.replace("/");
-  }, [router]);
+    if (isLoggedIn()) nav.replace("/");
+  }, [nav]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -23,8 +28,14 @@ export default function LoginPage() {
     setLoading(true);
     try {
       await login(username.trim(), password);
-      router.replace("/");
-    } catch {
+      nav.replace("/");
+    } catch (err: unknown) {
+      const e = err as Error & { code?: string };
+      if (e.code === "TRIAL_EXPIRED") {
+        localStorage.setItem("s2r2_trial_expired", "1");
+        nav.replace("/trial-expired");
+        return;
+      }
       setError("Invalid username or password. Please try again.");
       setPassword("");
     } finally {
@@ -45,8 +56,7 @@ export default function LoginPage() {
       </div>
 
       <div className="relative w-full max-w-sm">
-        {/* Card */}
-        <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-2xl p-8 space-y-7
+        <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-2xl p-8 space-y-6
                         border border-white/20 dark:border-gray-700/60 backdrop-blur-sm">
 
           {/* Logo + branding */}
@@ -68,6 +78,19 @@ export default function LoginPage() {
               </p>
             </div>
           </div>
+
+          {/* Inactivity notice */}
+          {isInactivity && (
+            <div className="flex items-start gap-2.5 text-sm text-amber-800 dark:text-amber-300
+                            bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700
+                            rounded-xl px-4 py-3">
+              <Clock size={15} className="shrink-0 mt-0.5" />
+              <span>
+                You were signed out after <span className="font-semibold">10 minutes of inactivity</span>.
+                Please sign in again to continue.
+              </span>
+            </div>
+          )}
 
           {/* Error message */}
           {error && (
@@ -151,13 +174,16 @@ export default function LoginPage() {
             </button>
           </form>
 
-          {/* Hint */}
-          <p className="text-center text-xs text-gray-400 dark:text-gray-600">
-            Admin: <span className="font-mono">s2r2admin</span> / <span className="font-mono">s2r2Admin1</span>
-          </p>
         </div>
-
       </div>
     </main>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
   );
 }

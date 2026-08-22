@@ -1,235 +1,278 @@
-# Deployment Guide — S2R2 Inventory System
+# S2R2 Inventory System - Deployment Guide
 
-## Architecture
-
-```
-┌─────────────────────────────────────────────────────────┐
-│                                                         │
-│   Browser  →  Vercel (Next.js)  →  Railway (Express)   │
-│                                         ↕               │
-│                                   Neon PostgreSQL       │
-│                                 (already live/seeded)   │
-└─────────────────────────────────────────────────────────┘
-```
-
-- **Frontend** → Vercel (free tier, auto-deploys from GitHub)
-- **Backend**  → Railway (free $5 credit, always-on)
-- **Database** → Neon (already running, no changes needed)
+## 🌐 Deployment Stack
+- **Database**: Neon PostgreSQL (Serverless)
+- **Backend**: Railway
+- **Frontend**: Vercel
 
 ---
 
-## Before You Start
+## 📊 Step 1: Deploy Database to Neon PostgreSQL
 
-You need:
-- [ ] GitHub account with this repo pushed
-- [ ] [railway.app](https://railway.app) account (sign up with GitHub)
-- [ ] [vercel.com](https://vercel.com) account (sign up with GitHub)
+### 1.1 Create Neon Project
+1. Go to [Neon Console](https://console.neon.tech)
+2. Sign in / Sign up
+3. Click **"New Project"**
+4. Project settings:
+   - Name: `s2r2-inventory`
+   - Region: Choose closest to your users
+   - PostgreSQL version: 15 or 16
+5. Click **"Create Project"**
 
-Push your code to GitHub first (if not done already):
+### 1.2 Get Connection String
+After creation, Neon provides connection strings:
+```
+postgresql://[user]:[password]@[host]/[database]?sslmode=require
+```
 
-```bash
-cd s2r2-inventory
-git add .
-git commit -m "ready for deploy"
-git push origin main
+**Example:**
+```
+postgresql://sandeep:abc123@ep-cool-frost-12345.us-east-2.aws.neon.tech/s2r2db?sslmode=require
+```
+
+### 1.3 Get Both Connection URLs
+
+Neon provides two connection strings:
+
+**Pooled Connection** (for your app):
+```
+postgresql://user:pass@host-pooler/db?sslmode=require
+```
+
+**Direct Connection** (for migrations):
+```
+postgresql://user:pass@host/db?sslmode=require
 ```
 
 ---
 
-## PART 1 — Deploy Backend on Railway
+## 🚂 Step 2: Deploy Backend to Railway
 
-### Step 1 — Create new project
+### 2.1 Create Railway Configuration
 
-1. Go to [railway.app](https://railway.app)
-2. Click **New Project**
-3. Click **Deploy from GitHub repo**
-4. Select your `s2r2-inventory` repository
-5. Railway will show you a service — click it
-
-### Step 2 — Set the root directory
-
-1. Click on the service card
-2. Go to **Settings** tab
-3. Under **Source** → **Root Directory** → type `backend`
-4. Click **Save**
-
-Railway will now only look inside the `backend/` folder.
-
-### Step 3 — Add environment variables
-
-1. Click **Variables** tab
-2. Click **Raw Editor** (easier to paste all at once)
-3. Paste this exactly — **replace nothing except the URLs you already have**:
-
-```
-DATABASE_URL=postgresql://neondb_owner:npg_xPqbZrCIf3w6@ep-round-rice-azwtfm6m-pooler.c-3.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require
-DIRECT_URL=postgresql://neondb_owner:npg_xPqbZrCIf3w6@ep-round-rice-azwtfm6m.c-3.ap-southeast-1.aws.neon.tech/neondb?sslmode=require
-JWT_SECRET=s2r2IOT
-PORT=4000
-FRONTEND_URL=https://placeholder.vercel.app
-```
-
-> Note: `FRONTEND_URL` is a placeholder for now. You will update it after Vercel gives you the real URL in Part 2.
-
-4. Click **Save Changes** — Railway will auto-deploy
-
-### Step 4 — Generate a public URL
-
-1. Go to **Settings** tab
-2. Scroll to **Networking**
-3. Click **Generate Domain**
-4. Copy the URL — it looks like:
-   ```
-   https://s2r2-inventory-api-production.up.railway.app
-   ```
-   **Save this URL — you need it for Vercel.**
-
-### Step 5 — Verify it works
-
-Open in browser:
-```
-https://your-railway-url.up.railway.app/health
-```
-
-You should see:
+Create `backend/railway.json`:
 ```json
-{ "status": "ok", "ts": "2025-..." }
+{
+  "$schema": "https://railway.app/railway.schema.json",
+  "build": {
+    "builder": "NIXPACKS"
+  },
+  "deploy": {
+    "startCommand": "npm run start:railway",
+    "restartPolicyType": "ON_FAILURE",
+    "restartPolicyMaxRetries": 10
+  }
+}
 ```
 
-If you see that — backend is live. ✅
+### 2.2 Update package.json
 
----
-
-## PART 2 — Deploy Frontend on Vercel
-
-### Step 1 — Create new project
-
-1. Go to [vercel.com](https://vercel.com)
-2. Click **Add New** → **Project**
-3. Click **Import** next to your `s2r2-inventory` repo
-4. Vercel will show configuration options
-
-### Step 2 — Configure the project
-
-1. Under **Root Directory** → click **Edit** → type `frontend` → click **Continue**
-2. Framework Preset should auto-detect **Next.js** — leave it
-3. Build & Output Settings — leave everything as default
-
-### Step 3 — Add environment variable
-
-1. Expand **Environment Variables**
-2. Add this one variable:
-
-| Name | Value |
-|------|-------|
-| `NEXT_PUBLIC_API_URL` | `https://your-railway-url.up.railway.app` |
-
-Replace the value with your actual Railway URL from Part 1 Step 4.
-
-3. Click **Deploy**
-
-Vercel will build and deploy — takes about 2 minutes.
-
-### Step 4 — Copy your Vercel URL
-
-After deploy succeeds, Vercel shows your URL:
+Add these scripts to `backend/package.json`:
+```json
+{
+  "scripts": {
+    "start": "node server.js",
+    "start:railway": "npx prisma migrate deploy && npx prisma generate && node server.js",
+    "build": "npx prisma generate"
+  }
+}
 ```
-https://s2r2-inventory.vercel.app
-```
-Copy it.
 
----
+### 2.3 Deploy to Railway
 
-## PART 3 — Update Railway with final Vercel URL
+1. **Login to Railway**
+   - Go to [railway.app](https://railway.app)
+   - Click **"Start a New Project"**
+   - **"Deploy from GitHub repo"**
 
-This step fixes CORS so the frontend can talk to the backend.
+2. **Select Repository**
+   - Choose `s2r2-inventory`
+   - Root directory: `backend`
 
-1. Go back to **Railway** → your backend service → **Variables**
-2. Find `FRONTEND_URL`
-3. Change the value to your real Vercel URL:
+3. **Add Environment Variables**
+
+   Go to **Variables** tab:
+   ```bash
+   DATABASE_URL=postgresql://user:pass@host-pooler/db?sslmode=require
+   DIRECT_URL=postgresql://user:pass@host/db?sslmode=require
+   JWT_SECRET=generate-with-openssl-rand-base64-32
+   FRONTEND_URL=https://your-app.vercel.app
+   NODE_ENV=production
+   PORT=4000
    ```
-   FRONTEND_URL=https://s2r2-inventory.vercel.app
+
+   **Generate JWT_SECRET:**
+   ```bash
+   openssl rand -base64 32
    ```
-4. Click **Save** — Railway redeploys automatically (takes ~30 seconds)
+
+4. **Generate Domain**
+   - Settings → Networking → Generate Domain
+   - Copy URL: `https://your-backend.up.railway.app`
+
+5. **Test Backend**
+   ```bash
+   curl https://your-backend.up.railway.app/health
+   ```
 
 ---
 
-## Final Check
+## ▲ Step 3: Deploy Frontend to Vercel
 
-Open your Vercel URL in the browser.
+### 3.1 Create Vercel Configuration
 
-- Login page loads ✅
-- Login with `s2r2admin` / `s2r2Admin1` ✅
-- Dashboard shows data ✅
-- Raw Materials, Finished Products, Clients all load ✅
+Create `frontend/vercel.json`:
+```json
+{
+  "buildCommand": "npm run build",
+  "devCommand": "npm run dev",
+  "installCommand": "npm install",
+  "framework": "nextjs"
+}
+```
 
----
+### 3.2 Deploy via Vercel Dashboard
 
-## Credentials (live in Neon already)
+1. **Go to Vercel**
+   - Visit [vercel.com](https://vercel.com)
+   - **"Add New Project"**
+   - Import from GitHub
 
-| Username    | Password      | Role   |
-|-------------|---------------|--------|
-| `s2r2admin` | `s2r2Admin1`  | ADMIN  |
-| `admin`     | `Admin2025`   | ADMIN  |
-| `manager`   | `Manager2025` | ADMIN  |
-| `superuser` | `Super2025s2` | ADMIN  |
-| `editor1`   | `Editor2025a` | EDITOR |
-| `editor2`   | `Editor2025b` | EDITOR |
+2. **Configure Project**
+   - Framework: Next.js
+   - Root Directory: `frontend`
+   - Build Command: `npm run build`
+   - Output Directory: `.next`
 
----
+3. **Environment Variables**
+   ```
+   NEXT_PUBLIC_API_URL=https://your-backend.up.railway.app
+   ```
 
-## Troubleshooting
+4. **Deploy**
+   - Click Deploy
+   - Wait 2-3 minutes
+   - Copy Vercel URL: `https://your-app.vercel.app`
 
-### Login fails / API not reachable
-- Check Railway logs: Railway → service → **Logs** tab
-- Confirm `NEXT_PUBLIC_API_URL` in Vercel matches your Railway domain exactly (no trailing slash)
-- Confirm `/health` endpoint returns OK
+### 3.3 Update Railway CORS
 
-### CORS error in browser console
-- `FRONTEND_URL` in Railway is wrong or still the placeholder
-- Update it to your exact Vercel URL and redeploy
+Go back to Railway and update:
+```
+FRONTEND_URL=https://your-app.vercel.app
+```
 
-### Vercel build fails
-- Check the build log for errors
-- Make sure root directory is set to `frontend` not the repo root
-
-### Railway deploy stuck / failed
-- Check **Build Logs** tab
-- Most common cause: wrong root directory — must be `backend`
-- Try clicking **Redeploy** after fixing variables
-
-### Database not connecting
-- Your Neon DB is already live and seeded
-- The `DATABASE_URL` in Railway must match exactly what is in `backend/.env`
-- Neon free tier sleeps after 5 days of inactivity — wake it up at console.neon.tech
+Railway will auto-redeploy.
 
 ---
 
-## Re-deploying after code changes
+## 🗄️ Step 4: Seed Production Database
 
-Once everything is set up, deploying updates is automatic:
+### 4.1 Create Production Seed File
 
+Create `backend/seed-prod.js`:
+```javascript
+const { PrismaClient } = require('@prisma/client');
+const bcrypt = require('bcryptjs');
+
+const prisma = new PrismaClient();
+
+async function main() {
+  console.log('🌱 Seeding production database...');
+
+  // Admin user
+  const adminPassword = await bcrypt.hash('Admin@2025', 10);
+  await prisma.user.upsert({
+    where: { username: 'admin' },
+    update: {},
+    create: {
+      username: 'admin',
+      email: 'admin@s2r2tech.com',
+      password: adminPassword,
+      role: 'ADMIN',
+      fullName: 'System Administrator'
+    }
+  });
+
+  console.log('✅ Production seeded!');
+}
+
+main()
+  .catch(console.error)
+  .finally(() => prisma.$disconnect());
+```
+
+### 4.2 Run Seed in Railway
+
+In Railway terminal:
 ```bash
-git add .
-git commit -m "your change description"
-git push origin main
+node seed-prod.js
 ```
 
-- Vercel detects the push → rebuilds frontend automatically
-- Railway detects the push → rebuilds backend automatically
+---
 
-No manual steps needed.
+## 🧪 Step 5: Testing
+
+### Test Backend
+```bash
+curl https://your-backend.up.railway.app/health
+```
+
+### Test Frontend
+Visit: `https://your-app.vercel.app`
+- Login: admin / Admin@2025
+- Test all features
 
 ---
 
-## Cost
+## 🔐 Security Checklist
 
-| Service | Plan  | Cost       |
-|---------|-------|------------|
-| Vercel  | Hobby | **Free**   |
-| Railway | Trial | **Free** ($5 credit, then ~$5/mo for hobby) |
-| Neon    | Free  | **Free**   |
+- [x] Strong JWT_SECRET
+- [x] DATABASE_URL with SSL
+- [x] CORS configured
+- [x] Environment variables set
+- [x] HTTPS enabled (automatic)
 
 ---
 
-*S2R2 Inventory Management System — Civitas Atlas Technologies Pvt. Ltd., Pune*
+## 💰 Pricing
+
+### Free Tier
+- **Neon**: 0.5 GB free
+- **Railway**: $5 credit/month
+- **Vercel**: 100 GB bandwidth free
+
+**Estimated Cost**: $0-10/month
+
+---
+
+## 🆘 Troubleshooting
+
+### Connection Timeout
+```
+Error: connect ETIMEDOUT
+```
+**Fix**: Add `connect_timeout=15` to DATABASE_URL
+
+### CORS Error
+```
+Access-Control-Allow-Origin
+```
+**Fix**: Verify FRONTEND_URL matches Vercel URL exactly
+
+### Prisma Not Generated
+```
+Prisma Client not found
+```
+**Fix**: Ensure `build` script has `prisma generate`
+
+---
+
+## 📞 Support
+
+- **Neon**: [docs.neon.tech](https://docs.neon.tech)
+- **Railway**: [docs.railway.app](https://docs.railway.app)
+- **Vercel**: [vercel.com/docs](https://vercel.com/docs)
+
+---
+
+**© 2025 S2R2 Technologies**

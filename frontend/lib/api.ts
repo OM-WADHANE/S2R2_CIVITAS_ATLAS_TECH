@@ -28,6 +28,14 @@ async function request<T>(
     throw new Error("Unauthorised");
   }
 
+  // 402 — trial / license expired
+  // Skip redirect if the user just activated a key (flag set by trial-expired page)
+  if (res.status === 402) {
+    localStorage.removeItem("s2r2_trial_unlocked"); // clear stale flag
+    window.location.href = "/trial-expired";
+    throw new Error("Trial expired");
+  }
+
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     throw new Error(body.error || `HTTP ${res.status}`);
@@ -38,14 +46,30 @@ async function request<T>(
 
 // ── Auth ──────────────────────────────────────────────────────
 export async function login(username: string, password: string) {
-  const data = await request<{ token: string; username: string; role: string }>(
-    "/auth/login",
-    { method: "POST", body: JSON.stringify({ username, password }) }
-  );
-  localStorage.setItem("s2r2_token",    data.token);
-  localStorage.setItem("s2r2_username", data.username);
-  localStorage.setItem("s2r2_role",     data.role);
-  return data;
+  // Login calls /api/auth/login which is exempt from the trial guard,
+  // but we still handle TRIAL_EXPIRED here in case it ever surfaces.
+  const res = await fetch(`${BASE}/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username, password }),
+  });
+
+  const body = await res.json().catch(() => ({}));
+
+  if (res.status === 402 || body.code === "TRIAL_EXPIRED") {
+    const err = new Error(body.error || "Trial period has ended") as Error & { code: string };
+    err.code = "TRIAL_EXPIRED";
+    throw err;
+  }
+
+  if (!res.ok) {
+    throw new Error(body.error || `HTTP ${res.status}`);
+  }
+
+  localStorage.setItem("s2r2_token",    body.token);
+  localStorage.setItem("s2r2_username", body.username);
+  localStorage.setItem("s2r2_role",     body.role);
+  return body as { token: string; username: string; role: string };
 }
 
 export function logout() {
@@ -148,3 +172,78 @@ export const updateUser = (id: number, data: { username?: string; role?: string;
 
 export const deleteUser = (id: number) =>
   request(`/users/${id}`, { method: "DELETE" });
+
+// ── Manufacture / BOM / Transactions ─────────────────────────
+
+export const getBom = (finishedProductId: number) =>
+  request<import("../types").BomResponse>(`/manufacture/bom/${finishedProductId}`);
+
+export const setBom = (finishedProductId: number, entries: { rawMaterialId: number; quantityRequired: number }[]) =>
+  request(`/manufacture/bom/${finishedProductId}`, { method: "POST", body: JSON.stringify({ entries }) });
+
+export const getFeasibility = (finishedProductId: number, qty: number) =>
+  request<import("../types").FeasibilityResult>(`/manufacture/feasibility/${finishedProductId}?qty=${qty}`);
+
+export const inwardStock = (data: { itemType: "RAW_MATERIAL" | "FINISHED_PRODUCT"; itemId: number; quantity: number; note?: string }) =>
+  request(`/manufacture/inward`, { method: "POST", body: JSON.stringify(data) });
+
+export const outwardStock = (data: { itemId: number; quantity: number; note?: string }) =>
+  request(`/manufacture/outward`, { method: "POST", body: JSON.stringify(data) });
+
+export const produceProduct = (data: { finishedProductId: number; quantity: number; note?: string }) =>
+  request<import("../types").ManufactureResult>(`/manufacture/produce`, { method: "POST", body: JSON.stringify(data) });
+
+export const getTransactions = (params = "") =>
+  request<import("../types").TransactionResponse>(`/manufacture/transactions${params ? "?" + params : ""}`);
+
+// ── Raw Material stock movements ──────────────────────────────
+export const inwardRawMaterial = (id: number, data: { quantity: number; note?: string }) =>
+  request(`/raw-materials/${id}/inward`, { method: "POST", body: JSON.stringify(data) });
+
+export const outwardRawMaterial = (id: number, data: { quantity: number; note?: string }) =>
+  request(`/raw-materials/${id}/outward`, { method: "POST", body: JSON.stringify(data) });
+
+// ── Excel bulk import ─────────────────────────────────────────
+export const importRawMaterials = (rows: Record<string, unknown>[]) =>
+  request<{ created: number; skipped: number; errors: string[] }>(
+    "/raw-materials/import",
+    { method: "POST", body: JSON.stringify({ rows }) }
+  );
+
+export const importFinishedProducts = (rows: Record<string, unknown>[]) =>
+  request<{ created: number; skipped: number; errors: string[] }>(
+    "/finished-products/import",
+    { method: "POST", body: JSON.stringify({ rows }) }
+  );
+
+// ── BOM management ────────────────────────────────────────────
+export const getAllBoms = () =>
+  request<{ products: { id: number; name: string; unit: string; entries: import("../types").BomEntry[] }[] }>("/manufacture/bom/all");
+
+export const getFinishedProductsWithBom = async () => {
+  const { products } = await request<{ products: import("../types").FinishedProduct[] }>("/finished-products");
+  return products;
+};
+
+// ── Civi AI — Decision Intelligence ──────────────────────────
+export const getIntelligence = () =>
+  request<import("../types").IntelligenceData>("/intelligence");
+
+export function exportIntelligencePdf(token: string) {
+  const a = document.createElement("a");
+  a.href = `/api/intelligence/export/pdf`;
+  // Trigger via fetch to pass auth header, then download
+  fetch("/api/intelligence/export/pdf", {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+    .then(r => { if (!r.ok) throw new Error("PDF failed"); return r.blob(); })
+    .then(blob => {
+      const url = URL.createObjectURL(blob);
+      const a   = document.createElement("a");
+      a.href = url;
+      a.download = "civi-ai-intelligence-report.pdf";
+      a.click();
+      URL.revokeObjectURL(url);
+    })
+    .catch(console.error);
+}

@@ -68,6 +68,20 @@ function buildPdf(PDFDocument, items, generatedBy) {
     doc.y = rowY + ROW_H;
   });
 
+  // ── Branding footer on every page ─────────────────────────
+  const brandText = "Generated using Civi API  |  By Civitas Atlas Co, Pune";
+  const pageCount = doc.bufferedPageRange ? doc.bufferedPageRange().count : 1;
+  const range     = doc.bufferedPageRange ? doc.bufferedPageRange() : { start: 0, count: 1 };
+  for (let i = range.start; i < range.start + range.count; i++) {
+    doc.switchToPage(i);
+    doc.fontSize(7).font("Helvetica").fillColor("#888")
+       .text(brandText,
+         doc.page.margins.left,
+         doc.page.height - doc.page.margins.bottom + 6,
+         { align: "center", width: doc.page.width - doc.page.margins.left - doc.page.margins.right }
+       );
+  }
+
   return doc;
 }
 
@@ -85,6 +99,45 @@ router.get("/", requireAuth, async (req, res, next) => {
     let items = await req.prisma.rawMaterial.findMany({ where, orderBy: { updatedAt: "desc" } });
     if (status)   items = items.filter(i => deriveStatus(i) === status);
     res.json({ items: items.map(i => ({ ...i, status: deriveStatus(i) })) });
+  } catch (err) { next(err); }
+});
+
+// POST /api/raw-materials/import — bulk import from Excel
+router.post("/import", requireAuth, async (req, res, next) => {
+  try {
+    const { rows } = req.body;
+    if (!Array.isArray(rows) || rows.length === 0)
+      return res.status(400).json({ error: "rows array is required" });
+
+    const results = { created: 0, skipped: 0, errors: [] };
+
+    for (const row of rows) {
+      const name = String(row["Name"] || row["name"] || "").trim();
+      if (!name) { results.skipped++; continue; }
+      try {
+        await req.prisma.rawMaterial.create({
+          data: {
+            name,
+            category:    String(row["Category"]    || row["category"]    || "General").trim(),
+            description: String(row["Description"] || row["description"] || "").trim() || null,
+            quantity:    Number(row["Qty"]          || row["quantity"]    || 0),
+            unit:        String(row["Unit"]         || row["unit"]        || "pcs").trim(),
+            supplier:    String(row["Supplier"]     || row["supplier"]    || "").trim() || null,
+            location:    String(row["Location"]     || row["location"]    || "").trim() || null,
+            minStock:    Number(row["Min Stock"]    || row["minStock"]    || 0),
+            price:       Number(row["Price (₹)"]   || row["price"]       || 0),
+          },
+        });
+        await req.prisma.activityLog.create({
+          data: { module: "raw_material", label: name, action: "created", username: req.user.username },
+        });
+        results.created++;
+      } catch (e) {
+        results.skipped++;
+        results.errors.push(`${name}: ${e.message}`);
+      }
+    }
+    res.json(results);
   } catch (err) { next(err); }
 });
 
@@ -150,6 +203,86 @@ router.delete("/:id", requireAuth, async (req, res, next) => {
     const item = await req.prisma.rawMaterial.delete({ where: { id } });
     await logActivity(req.prisma, req.user.username, "raw_material", item.name, "deleted");
     res.json({ message: "Deleted", id });
+  } catch (err) { next(err); }
+});
+
+// ── POST /api/raw-materials/:id/inward ────────────────────────
+// Body: { quantity, note? }
+// Adds stock — used when raw materials are received from suppliers.
+router.post("/:id/inward", requireAuth, async (req, res, next) => {
+  try {
+    const id  = Number(req.params.id);
+    const qty = Number(req.body.quantity);
+    if (!qty || qty <= 0) return res.status(400).json({ error: "quantity must be a positive number" });
+
+    const item = await req.prisma.rawMaterial.findUniqueOrThrow({ where: { id } });
+    const updated = await req.prisma.rawMaterial.update({
+      where: { id },
+      data:  { quantity: { increment: qty }, lastUpdated: new Date() },
+    });
+
+    await req.prisma.inventoryTransaction.create({
+      data: {
+        transactionType: "INWARD",
+        itemType:        "RAW_MATERIAL",
+        itemId:          id,
+        itemName:        item.name,
+        quantity:        qty,
+        note:            req.body.note || null,
+        performedBy:     req.user.username,
+      },
+    });
+
+    await logActivity(req.prisma, req.user.username, "raw_material", `${item.name} +${qty} (INWARD)`, "updated");
+    res.json({ message: "Inward recorded", item: { ...updated, status: deriveStatus(updated) }, transactionType: "INWARD" });
+  } catch (err) { next(err); }
+});
+
+// ── POST /api/raw-materials/:id/outward ───────────────────────
+// Body: { quantity, note? }
+// Reduces stock — used when raw materials are consumed or issued manually.
+router.post("/:id/outward", requireAuth, async (req, res, next) => {
+  try {
+    const id  = Number(req.params.id);
+    const qty = Number(req.body.quantity);
+    if (!qty || qty <= 0) return res.status(400).json({ error: "quantity must be a positive number" });
+
+    const item = await req.prisma.rawMaterial.findUniqueOrThrow({ where: { id } });
+    if (item.quantity < qty) {
+      return res.status(422).json({
+        error:     `Insufficient stock. Available: ${item.quantity} ${item.unit}, Requested: ${qty}`,
+        available: item.quantity,
+        requested: qty,
+      });
+    }
+
+    const updated = await req.prisma.rawMaterial.update({
+      where: { id },
+      data:  { quantity: { decrement: qty }, lastUpdated: new Date() },
+    });
+
+    await req.prisma.inventoryTransaction.create({
+      data: {
+        transactionType: "OUTWARD",
+        itemType:        "RAW_MATERIAL",
+        itemId:          id,
+        itemName:        item.name,
+        quantity:        -qty,
+        note:            req.body.note || null,
+        performedBy:     req.user.username,
+      },
+    });
+
+    await logActivity(req.prisma, req.user.username, "raw_material", `${item.name} -${qty} (OUTWARD)`, "updated");
+
+    // Check for low-stock alert after deduction
+    const stockStatus = deriveStatus(updated);
+    res.json({
+      message:       "Outward recorded",
+      item:          { ...updated, status: stockStatus },
+      transactionType: "OUTWARD",
+      lowStockAlert: stockStatus !== "active",
+    });
   } catch (err) { next(err); }
 });
 

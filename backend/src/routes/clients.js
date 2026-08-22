@@ -192,6 +192,19 @@ router.get("/export/pdf", requireAuth, async (req, res, next) => {
       doc.y = rowY + ROW_H;
     });
 
+    // ── Branding footer on every page ───────────────────────
+    const brandText = "Generated using Civi API  |  By Civitas Atlas Co, Pune";
+    const range     = doc.bufferedPageRange ? doc.bufferedPageRange() : { start: 0, count: 1 };
+    for (let i = range.start; i < range.start + range.count; i++) {
+      doc.switchToPage(i);
+      doc.fontSize(7).font("Helvetica").fillColor("#888")
+         .text(brandText,
+           doc.page.margins.left,
+           doc.page.height - doc.page.margins.bottom + 6,
+           { align: "center", width: doc.page.width - doc.page.margins.left - doc.page.margins.right }
+         );
+    }
+
     doc.end();
   } catch (err) { next(err); }
 });

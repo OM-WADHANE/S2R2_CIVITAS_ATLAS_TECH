@@ -1,18 +1,406 @@
 # S2R2 Inventory Management System
 
-IoT & Inventory Platform · Version 1.0  
-Built by **Civitas Atlas Technologies Pvt. Ltd.** for **S2R2 Technologies**, Pune, India.
+**Enterprise IoT & Inventory Platform** · Version 1.0  
+Built by **Civitas Atlas Technologies Pvt. Ltd.** for **S2R2 Technologies**, Pune, India  
+**Contact:** civitasatlasco@gmail.com
 
 ---
 
-## Stack
+## 🚀 Overview
 
-| Layer    | Technology                                      |
-|----------|-------------------------------------------------|
-| Frontend | Next.js 14, React 18, Tailwind CSS, TypeScript  |
-| Backend  | Node.js, Express 4, Prisma 5, JWT, bcryptjs     |
-| Database | PostgreSQL on **Neon** (serverless)             |
-| Hosting  | Vercel (frontend) · Railway or Render (backend) |
+S2R2 IMS is a complete inventory management platform featuring:
+- **Real-time stock tracking** with IoT device integration
+- **AI-powered Decision Intelligence** (Civi AI) for reorder alerts & replenishment planning
+- **Bill of Materials (BOM)** management with automatic manufacturing logic
+- **Role-based access control** (ADMIN / EDITOR / VIEWER)
+- **Animated Civi AI icon** - Gemini-style hexagonal design with slow rotation
+- **Trial/License system** with instant activation
+- **Complete audit trail** with activity logging
+- **Responsive UI** with dark mode support
+
+---
+
+## 🎨 Brand Identity
+
+### Civi AI Icon
+- **Design:** Animated hexagonal icon (Gemini AI inspired)
+- **Style:** Thick strokes (2.5px), purple gradient (#7c3aed → #a855f7 → #c084fc)
+- **Animation:** Slow rotation (12s outer, 15s inner counter-rotation, 3s pulse)
+- **Usage:** Header, sidebar, intelligence pages, chat avatars
+- **Component:** `frontend/components/CiviAIIcon.tsx`
+
+### Copyright
+**© 2026 Civitas Atlas Technologies Pvt. Ltd., Pune**  
+Used in footer and all generated reports/exports
+
+---
+
+## 📦 Stack
+
+| Layer    | Technology                                     |
+|----------|------------------------------------------------|
+| Frontend | Next.js 14, React 18, Tailwind CSS, TypeScript |
+| Backend  | Node.js, Express 4, Prisma 5, JWT, bcryptjs    |
+| Database | PostgreSQL 17 (local)                          |
+| AI       | Gemini 2.0 Flash (Decision Intelligence)      |
+
+---
+
+## ✨ Features
+
+| Module | Capabilities |
+|--------|-------------|
+| **Authentication** | JWT login, bcrypt password hashing, role-based access (ADMIN / EDITOR / VIEWER) |
+| **Dashboard** | 4-tab live dashboard: Real-Time Stock, Low Stock Alerts, Cost/Price Analysis, Recent Issuances |
+| **Raw Materials** | Full CRUD, **Inward** (receive stock) + **Outward** (issue stock), Excel bulk import with template, category filter, stock status, price, CSV/Excel/PDF export |
+| **Finished Products** | Full CRUD, **Inward** / **Outward** / **Manufacture** (BOM-driven), Excel bulk import with template, BOM editor in add/edit modal, stock tracking, CSV/Excel/PDF export |
+| **Bill of Materials (BOM)** | Define components per finished product, per-material feasibility (green/red), material cost per unit — ADMIN + EDITOR only |
+| **Manufacture Logic** | Pressing Manufacture deducts raw material stock automatically per BOM, validates sufficiency before proceeding |
+| **Inventory Transactions** | Full audit log of every INWARD / OUTWARD / MANUFACTURE movement with user attribution |
+| **Clients** | Full CRUD, card + table view, Excel bulk import with preview, CSV/Excel/PDF export |
+| **IoT Devices** | Full CRUD, ping, ONLINE/OFFLINE/MAINTENANCE status tracking |
+| **Activity Log** | Paginated audit trail — module, action, username, timestamp |
+| **Reports** | 4-tab report view with date range filter, CSV/Excel/PDF download per module |
+| **Admin Panel** | User management (CRUD), live permission matrix, trial/license status card |
+| **Notifications** | Bell icon in header with badge count, bottom-right popup (10s auto-dismiss), `/notifications` subpage grouped by urgency |
+| **Decision Intelligence (Civi AI)** | AI-powered reorder alerts, manufacture readiness, replenishment plan with cost, 30-day velocity analytics |
+| **Civi AI Chat** | Real-time chat assistant for inventory queries and recommendations |
+| **Exports** | All exports branded: "Generated using Civi API \| By Civitas Atlas Co, Pune" |
+| **Dark Mode** | Persistent, flash-free, system-aware |
+| **Responsive UI** | Mobile sidebar, collapsible nav, card/table toggle |
+
+---
+
+## 🏗️ Project Structure
+
+```
+s2r2-inventory/
+├── frontend/                      # Next.js 14 app (port 3000)
+│   ├── app/                       # Pages (App Router)
+│   │   ├── page.tsx               # Dashboard (4-tab)
+│   │   ├── raw-materials/         # CRUD + Inward/Outward + Excel Import
+│   │   ├── finished-products/     # CRUD + Inward/Outward/Manufacture + Excel Import + BOM editor
+│   │   ├── bom/                   # BOM management (ADMIN + EDITOR)
+│   │   ├── clients/               # CRUD + Excel Import
+│   │   ├── iot-devices/           # CRUD + Ping
+│   │   ├── reports/               # Multi-tab export
+│   │   ├── intelligence/          # Civi AI Decision Intelligence
+│   │   │   └── chat/              # Civi AI Chat Assistant
+│   │   ├── notifications/         # Stock alerts subpage
+│   │   ├── admin/                 # User management + trial status
+│   │   ├── login/                 # Auth
+│   │   └── trial-expired/         # License key entry
+│   ├── components/
+│   │   ├── AppShell.tsx           # Auth guard + inactivity timeout + notification popup
+│   │   ├── Header.tsx             # Navigation + Civi AI icon + bell icon with badge
+│   │   ├── Sidebar.tsx            # Nav (role-filtered) + Civi AI icon
+│   │   ├── Footer.tsx             # Protected branding (integrity check)
+│   │   └── CiviAIIcon.tsx         # Animated hexagonal icon (Gemini-style)
+│   ├── lib/
+│   │   ├── api.ts                 # Centralised API client (all fetch calls)
+│   │   ├── permissions.ts         # Role-based permission matrix
+│   │   ├── notifications.ts       # Shared notification store (single fetch/session)
+│   │   ├── useTrialStatus.ts      # Trial countdown hook
+│   │   └── useInactivityTimeout.ts# 10-minute inactivity logout
+│   └── types/
+│       └── index.ts               # All TypeScript interfaces
+│
+└── backend/                       # Express 4 API (port 4000)
+    ├── server.js                  # App setup, middleware, route registration
+    ├── prisma/
+    │   ├── schema.prisma          # DB models: User, RawMaterial, FinishedProduct,
+    │   │                          # Client, IoTDevice, ActivityLog, BillOfMaterials,
+    │   │                          # InventoryTransaction
+    │   └── seed.js                # Users + sample data + real-life BOM mappings
+    └── src/
+        ├── middleware/
+        │   ├── auth.js            # JWT verify, requireAuth, requireRole
+        │   ├── trial.js           # License key validation, plan expiry
+        │   └── integrity.js       # Ownership HMAC check (startup + per-request)
+        └── routes/
+            ├── auth.js            # POST /api/auth/login
+            ├── rawMaterials.js    # CRUD + Inward + Outward + Import + PDF export
+            ├── finishedProducts.js# CRUD + Import + PDF export
+            ├── clients.js         # CRUD + Import + PDF export
+            ├── dashboard.js       # Stats aggregation (4-tab dashboard)
+            ├── manufacture.js     # BOM CRUD, feasibility, produce, inward/outward, transactions
+            ├── intelligence.js    # Civi AI: reorder alerts, readiness, replenishment, velocity + Chat
+            ├── activity.js        # Paginated activity log
+            ├── iotDevices.js      # IoT device CRUD + ping
+            ├── users.js           # User management (ADMIN)
+            └── trial.js           # POST /api/trial/activate
+```
+
+---
+
+## 🚀 Local Development
+
+### Prerequisites
+
+- Node.js 18+
+- PostgreSQL 17 installed and running locally
+
+### 1 — Clone & install
+
+```bash
+git clone <repo-url>
+cd s2r2-inventory
+cd backend  && npm install
+cd ../frontend && npm install
+```
+
+### 2 — Create the local database
+
+Contact civitasatlasco@gmail.com for DB setup credentials.  
+SQL setup script is in `backend/setup-local-db.sql`.
+
+### 3 — Configure environment files
+
+`backend/.env` and `frontend/.env.local` are **not in the repository** — obtain from your administrator.
+
+**Required `backend/.env` variables:**
+
+| Variable            | Description |
+|---------------------|-------------|
+| `OWNER_SIG`         | Ownership signature (tamper protection — do not change) |
+| `DATABASE_URL`      | PostgreSQL connection string |
+| `JWT_SECRET`        | JWT signing secret |
+| `PORT`              | API port (default 4000) |
+| `FRONTEND_URL`      | Frontend origin for CORS |
+| `TRIAL_LICENSE_KEY` | License key — contact civitasatlasco@gmail.com |
+| `GEMINI_API_KEY`    | Gemini AI API key for Civi AI features |
+
+**Required `frontend/.env.local` variable:**
+
+| Variable              | Description |
+|-----------------------|-------------|
+| `NEXT_PUBLIC_API_URL` | Backend API base URL |
+
+### 4 — Push schema & seed
+
+```bash
+cd backend
+npm run db:push   # creates all tables
+npm run db:seed   # creates 8 users + sample data
+```
+
+### 5 — Run both servers
+
+```bash
+# Terminal 1
+cd backend && node server.js
+
+# Terminal 2
+cd frontend && npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000)
+
+---
+
+## 🔑 Login Credentials
+
+Seeded by `npm run db:seed`.
+
+| Username  | Password       | Role   |
+|-----------|----------------|--------|
+| `sandeep` | `Sandeep@2025` | ADMIN  |
+| `rohan`   | `Rohan@2025`   | ADMIN  |
+| `akshay`  | `Akshay@2025`  | ADMIN  |
+| `emp1`    | `Emp1@2025`    | EDITOR |
+| `emp2`    | `Emp2@2025`    | EDITOR |
+| `emp3`    | `Emp3@2025`    | EDITOR |
+| `emp4`    | `Emp4@2025`    | EDITOR |
+| `emp5`    | `Emp5@2025`    | EDITOR |
+
+> **Note:** Keep these credentials private. Do not commit them to version control.
+
+---
+
+## 📜 Trial / License
+
+### How it works
+
+1. `TRIAL_LICENSE_KEY` in `backend/.env` activates the plan at startup.
+2. Every API request is checked against the expiry before reaching any route.
+3. On expiry, users see `/trial-expired` — enter a renewal key to restore access instantly.
+4. Entering a valid key updates the in-memory expiry — **no data is reset, no restart needed**.
+
+### Plans (start date: 19 Aug 2026)
+
+| Plan | Expires |
+|------|---------|
+| 1-month | 19 Sep 2026 |
+| 6-month | 19 Feb 2027 |
+| 1-year | 19 Aug 2027 |
+
+License keys issued exclusively by Civitas Atlas Technologies Pvt. Ltd.  
+Contact: civitasatlasco@gmail.com
+
+### Trial status (Admin panel)
+
+The Admin panel shows a live license card with:
+- Plan name + expiry date and time
+- Days + hours remaining (accurate calendar calculation)
+- Next plan upgrade suggestion
+- Direct contact link
+
+### Verify via health endpoint
+
+```bash
+GET /health
+→ { "status": "ok", "trial": { "mode": "1-month plan", "expired": false, "daysRemaining": 33, ... } }
+```
+
+---
+
+## 🔒 Integrity & Ownership Protection
+
+| What is checked | When | On failure |
+|-----------------|------|-----------|
+| All required env vars present | Startup + every request | Server exits / 503 |
+| `OWNER_SIG` matches ownership signature | Startup + every request | Server exits / 503 |
+| PostgreSQL reachable | Startup | Server exits |
+| Footer branding constants intact | Frontend runtime | Full-screen lock with builder key bypass |
+
+**Do not:**
+- Remove or change `OWNER_SIG` in `.env`
+- Delete or modify `backend/src/middleware/integrity.js`
+- Remove "Civitas Atlas Technologies" from `Footer.tsx`
+
+Builder override key available for Civitas Atlas team — contact civitasatlasco@gmail.com.
+
+---
+
+## 🌐 API Reference
+
+Base URL: `http://localhost:4000`  
+Protected routes require: `Authorization: Bearer <token>`
+
+| Method | Route | Auth | Description |
+|--------|-------|------|-------------|
+| POST | `/api/auth/login` | No | Login, returns JWT |
+| GET | `/api/dashboard` | Yes | Stats summary |
+| GET/POST/PUT/DELETE | `/api/raw-materials` | Yes | Raw materials CRUD |
+| GET | `/api/raw-materials/export/pdf` | Yes | PDF export |
+| GET/POST/PUT/DELETE | `/api/finished-products` | Yes | Finished products CRUD |
+| GET | `/api/finished-products/export/pdf` | Yes | PDF export |
+| GET/POST/PUT/DELETE | `/api/clients` | Yes | Clients CRUD |
+| POST | `/api/clients/import` | Yes | Bulk Excel import |
+| GET | `/api/clients/export/pdf` | Yes | PDF export |
+| GET/POST/PUT/DELETE | `/api/iot-devices` | Yes | IoT devices CRUD |
+| PATCH | `/api/iot-devices/:id/ping` | Yes | Ping device |
+| GET | `/api/activity` | Yes | Activity log |
+| DELETE | `/api/activity` | ADMIN | Clear log |
+| GET/POST/PUT/DELETE | `/api/users` | ADMIN | User management |
+| GET | `/api/intelligence` | Yes | Civi AI analytics |
+| POST | `/api/intelligence/chat` | Yes | Civi AI chat assistant |
+| POST | `/api/trial/activate` | No | Activate license key |
+| GET | `/health` | No | Health + trial status |
+
+---
+
+## 🗄️ Database Models
+
+| Model | Description |
+|-------|-------------|
+| `User` | App users with role (ADMIN/EDITOR/VIEWER) |
+| `RawMaterial` | Raw material records with quantity, price, stock tracking |
+| `FinishedProduct` | Finished goods with qty, price, ACTIVE/HOLD status |
+| `Client` | Client records with GST, contact, status |
+| `IoTDevice` | IoT device registry with status and ping tracking |
+| `ActivityLog` | Audit trail of all create/update/delete actions |
+| `BillOfMaterials` | Component mappings for finished products |
+| `InventoryTransaction` | All stock movements (INWARD/OUTWARD/MANUFACTURE) |
+
+---
+
+## 👥 Role Permissions
+
+| Action | ADMIN | EDITOR | VIEWER |
+|--------|-------|--------|--------|
+| View all pages | ✅ | ✅ | ✅ |
+| Add records | ✅ | ✅ | ❌ |
+| Edit records | ✅ | ✅ | ❌ |
+| Delete records | ✅ | ❌ | ❌ |
+| BOM Management | ✅ | ✅ | ❌ |
+| Admin panel | ✅ | ❌ | ❌ |
+| Civi AI | ✅ | ✅ | ✅ |
+
+---
+
+## 🛠️ Scripts
+
+```bash
+# Backend
+npm run dev        # nodemon dev server :4000
+npm run start      # production server
+npm run db:push    # push schema to DB
+npm run db:seed    # seed users + sample data
+npm run db:studio  # Prisma Studio GUI
+
+# Frontend
+npm run dev        # Next.js dev server :3000
+npm run build      # production build
+npm run lint       # ESLint
+```
+
+---
+
+## 🤖 Civi AI Features
+
+### Decision Intelligence (`/intelligence`)
+- **Reorder Alerts:** Items below reorder threshold
+- **Manufacture Readiness:** Products with sufficient raw materials
+- **Replenishment Plan:** Priority restocking with cost estimates
+- **30-Day Velocity:** Consumption trends and forecasting
+- **AI Narrative:** Natural language insights from Gemini 2.0 Flash
+
+### Chat Assistant (`/intelligence/chat`)
+- Real-time inventory queries
+- Natural language responses
+- Context-aware recommendations
+- Stock analysis and suggestions
+- Quick starter prompts
+
+---
+
+## 📞 Contact & Support
+
+**Civitas Atlas Technologies Pvt. Ltd.**  
+Pune, India  
+📧 [civitasatlasco@gmail.com](mailto:civitasatlasco@gmail.com)
+
+---
+
+## 📄 License
+
+Proprietary software owned by **Civitas Atlas Technologies Pvt. Ltd.**  
+See `LICENSE.md` for complete terms.
+
+---
+
+*© 2026 Civitas Atlas Technologies Pvt. Ltd., Pune. All rights reserved.*
+
+| Module | Capabilities |
+|--------|-------------|
+| **Authentication** | JWT login, bcrypt password hashing, role-based access (ADMIN / EDITOR / VIEWER) |
+| **Dashboard** | 4-tab live dashboard: Real-Time Stock, Low Stock Alerts, Cost/Price Analysis, Recent Issuances |
+| **Raw Materials** | Full CRUD, **Inward** (receive stock) + **Outward** (issue stock), Excel bulk import with template, category filter, stock status, price, CSV/Excel/PDF export |
+| **Finished Products** | Full CRUD, **Inward** / **Outward** / **Manufacture** (BOM-driven), Excel bulk import with template, BOM editor in add/edit modal, stock tracking, CSV/Excel/PDF export |
+| **Bill of Materials (BOM)** | Define components per finished product, per-material feasibility (green/red), material cost per unit — ADMIN + EDITOR only |
+| **Manufacture Logic** | Pressing Manufacture deducts raw material stock automatically per BOM, validates sufficiency before proceeding |
+| **Inventory Transactions** | Full audit log of every INWARD / OUTWARD / MANUFACTURE movement with user attribution |
+| **Clients** | Full CRUD, card + table view, Excel bulk import with preview, CSV/Excel/PDF export |
+| **IoT Devices** | Full CRUD, ping, ONLINE/OFFLINE/MAINTENANCE status tracking |
+| **Activity Log** | Paginated audit trail — module, action, username, timestamp |
+| **Reports** | 4-tab report view with date range filter, CSV/Excel/PDF download per module |
+| **Admin Panel** | User management (CRUD), live permission matrix, trial/license status card |
+| **Notifications** | Bell icon in header with badge count, bottom-right popup (10s auto-dismiss), `/notifications` subpage grouped by urgency — SRS §3.4 |
+| **Decision Intelligence** | Civi AI page: reorder alerts, manufacture readiness, replenishment plan with cost, 30-day velocity — SRS §3.5 |
+| **Exports** | All exports branded: "Generated using Civi API \| By Civitas Atlas Co, Pune" |
+| **Dark Mode** | Persistent, flash-free, system-aware |
+| **Responsive UI** | Mobile sidebar, collapsible nav, card/table toggle |
 
 ---
 
@@ -20,20 +408,58 @@ Built by **Civitas Atlas Technologies Pvt. Ltd.** for **S2R2 Technologies**, Pun
 
 ```
 s2r2-inventory/
-├── frontend/          # Next.js app (port 3000)
-│   ├── app/           # Pages (App Router)
-│   ├── components/    # AppShell, Header, Sidebar, Footer
-│   ├── lib/           # api.ts, permissions.ts
-│   └── types/         # Shared TypeScript types
+├── frontend/                      # Next.js 14 app (port 3000)
+│   ├── app/                       # Pages (App Router)
+│   │   ├── page.tsx               # Dashboard (4-tab)
+│   │   ├── raw-materials/         # CRUD + Inward/Outward + Excel Import
+│   │   ├── finished-products/     # CRUD + Inward/Outward/Manufacture + Excel Import + BOM editor
+│   │   ├── bom/                   # BOM management (ADMIN + EDITOR)
+│   │   ├── clients/               # CRUD + Excel Import
+│   │   ├── iot-devices/           # CRUD + Ping
+│   │   ├── reports/               # Multi-tab export
+│   │   ├── intelligence/          # Civi AI Decision Intelligence (SRS §3.5)
+│   │   ├── notifications/         # Stock alerts subpage (SRS §3.4)
+│   │   ├── admin/                 # User management + trial status
+│   │   ├── login/                 # Auth
+│   │   └── trial-expired/         # License key entry
+│   ├── components/
+│   │   ├── AppShell.tsx           # Auth guard + inactivity timeout + notification popup
+│   │   ├── Header.tsx             # Navigation + bell icon with badge
+│   │   ├── Sidebar.tsx            # Nav (role-filtered)
+│   │   └── Footer.tsx             # Protected branding (integrity check)
+│   ├── lib/
+│   │   ├── api.ts                 # Centralised API client (all fetch calls)
+│   │   ├── permissions.ts         # Role-based permission matrix
+│   │   ├── notifications.ts       # Shared notification store (single fetch/session)
+│   │   ├── useTrialStatus.ts      # Trial countdown hook
+│   │   └── useInactivityTimeout.ts# 10-minute inactivity logout
+│   └── types/
+│       └── index.ts               # All TypeScript interfaces
 │
-└── backend/           # Express API (port 4000)
-    ├── server.js
+└── backend/                       # Express 4 API (port 4000)
+    ├── server.js                  # App setup, middleware, route registration
     ├── prisma/
-    │   ├── schema.prisma
-    │   └── seed.js
+    │   ├── schema.prisma          # DB models: User, RawMaterial, FinishedProduct,
+    │   │                          # Client, IoTDevice, ActivityLog, BillOfMaterials,
+    │   │                          # InventoryTransaction
+    │   └── seed.js                # Users + sample data + real-life BOM mappings
     └── src/
-        ├── middleware/auth.js
+        ├── middleware/
+        │   ├── auth.js            # JWT verify, requireAuth, requireRole
+        │   ├── trial.js           # License key validation, plan expiry
+        │   └── integrity.js       # Ownership HMAC check (startup + per-request)
         └── routes/
+            ├── auth.js            # POST /api/auth/login
+            ├── rawMaterials.js    # CRUD + Inward + Outward + Import + PDF export
+            ├── finishedProducts.js# CRUD + Import + PDF export
+            ├── clients.js         # CRUD + Import + PDF export
+            ├── dashboard.js       # Stats aggregation (4-tab dashboard)
+            ├── manufacture.js     # BOM CRUD, feasibility, produce, inward/outward, transactions
+            ├── intelligence.js    # Civi AI: reorder alerts, readiness, replenishment, velocity
+            ├── activity.js        # Paginated activity log
+            ├── iotDevices.js      # IoT device CRUD + ping
+            ├── users.js           # User management (ADMIN)
+            └── trial.js           # POST /api/trial/activate
 ```
 
 ---
@@ -43,58 +469,58 @@ s2r2-inventory/
 ### Prerequisites
 
 - Node.js 18+
-- A [Neon](https://neon.tech) PostgreSQL database (free tier is fine)
+- PostgreSQL 17 installed and running locally
 
 ### 1 — Clone & install
 
 ```bash
-git clone <your-repo-url>
+git clone <repo-url>
 cd s2r2-inventory
-
-# Backend
-cd backend && npm install
-
-# Frontend
+cd backend  && npm install
 cd ../frontend && npm install
 ```
 
-### 2 — Configure backend environment
+### 2 — Create the local database
 
-Create `backend/.env`:
+Contact civitasatlasco@gmail.com for DB setup credentials.  
+SQL setup script is in `backend/setup-local-db.sql`.
 
-```env
-DATABASE_URL="postgresql://<user>:<password>@<pooler-host>/<db>?sslmode=require&channel_binding=require"
-DIRECT_URL="postgresql://<user>:<password>@<direct-host>/<db>?sslmode=require"
-PORT=4000
-JWT_SECRET="s2r2IOT"
-FRONTEND_URL="http://localhost:3000"
-```
+### 3 — Configure environment files
 
-Get your `DATABASE_URL` and `DIRECT_URL` from Neon Console → Connection Details → **Prisma** mode.
+`backend/.env` and `frontend/.env.local` are **not in the repository** — obtain from your administrator.
 
-### 3 — Configure frontend environment
+**Required `backend/.env` variables:**
 
-Create `frontend/.env.local`:
+| Variable            | Description |
+|---------------------|-------------|
+| `OWNER_SIG`         | Ownership signature (tamper protection — do not change) |
+| `DATABASE_URL`      | PostgreSQL connection string |
+| `JWT_SECRET`        | JWT signing secret |
+| `PORT`              | API port (default 4000) |
+| `FRONTEND_URL`      | Frontend origin for CORS |
+| `TRIAL_LICENSE_KEY` | License key — contact civitasatlasco@gmail.com |
 
-```env
-NEXT_PUBLIC_API_URL=http://localhost:4000
-```
+**Required `frontend/.env.local` variable:**
 
-### 4 — Push schema & seed database
+| Variable              | Description |
+|-----------------------|-------------|
+| `NEXT_PUBLIC_API_URL` | Backend API base URL |
+
+### 4 — Push schema & seed
 
 ```bash
 cd backend
-npm run db:push       # pushes schema to Neon
-npm run db:seed       # creates users + sample data
+npm run db:push   # creates all tables
+npm run db:seed   # creates 8 users + sample data
 ```
 
 ### 5 — Run both servers
 
 ```bash
-# Terminal 1 — Backend
+# Terminal 1
 cd backend && npm run dev
 
-# Terminal 2 — Frontend
+# Terminal 2
 cd frontend && npm run dev
 ```
 
@@ -104,189 +530,152 @@ Open [http://localhost:3000](http://localhost:3000)
 
 ## Login Credentials
 
-| Username    | Password      | Role   |
-|-------------|---------------|--------|
-| `s2r2admin` | `s2r2Admin1`  | ADMIN  |
-| `admin`     | `Admin2025`   | ADMIN  |
-| `manager`   | `Manager2025` | ADMIN  |
-| `superuser` | `Super2025s2` | ADMIN  |
-| `editor1`   | `Editor2025a` | EDITOR |
-| `editor2`   | `Editor2025b` | EDITOR |
+Seeded by `npm run db:seed`.
+
+| Username  | Password       | Role   |
+|-----------|----------------|--------|
+| `sandeep` | `Sandeep@2025` | ADMIN  |
+| `rohan`   | `Rohan@2025`   | ADMIN  |
+| `akshay`  | `Akshay@2025`  | ADMIN  |
+| `emp1`    | `Emp1@2025`    | EDITOR |
+| `emp2`    | `Emp2@2025`    | EDITOR |
+| `emp3`    | `Emp3@2025`    | EDITOR |
+| `emp4`    | `Emp4@2025`    | EDITOR |
+| `emp5`    | `Emp5@2025`    | EDITOR |
+
+> **Note:** Keep these credentials private. Do not commit them to version control.
 
 ---
 
-## Deploying to Vercel + Railway
+## Trial / License
 
-### Overview
+### How it works
 
-```
-Neon PostgreSQL  ←→  Railway (Express API)  ←→  Vercel (Next.js)
-```
+1. `TRIAL_LICENSE_KEY` in `backend/.env` activates the plan at startup.
+2. Every API request is checked against the expiry before reaching any route.
+3. On expiry, users see `/trial-expired` — enter a renewal key to restore access instantly.
+4. Entering a valid key updates the in-memory expiry — **no data is reset, no restart needed**.
 
----
+### Plans (start date: 19 Aug 2026)
 
-### Step 1 — Deploy the Backend on Railway
+| Plan | Expires |
+|------|---------|
+| 1-month | 19 Sep 2026 |
+| 6-month | 19 Feb 2027 |
+| 1-year | 19 Aug 2027 |
 
-1. Go to [railway.app](https://railway.app) → **New Project** → **Deploy from GitHub repo**
-2. Select the **root of this repo**
-3. Railway will detect Node.js automatically — set the **root directory** to `backend`
-4. Go to **Variables** tab and add:
+License keys issued exclusively by Civitas Atlas Technologies Pvt. Ltd.  
+Contact: civitasatlasco@gmail.com
 
-```
-DATABASE_URL      = <your Neon pooled URL>
-DIRECT_URL        = <your Neon direct URL>
-JWT_SECRET        = s2r2IOT
-FRONTEND_URL      = https://<your-vercel-app>.vercel.app
-PORT              = 4000
-```
+### Trial status (Admin panel)
 
-5. Go to **Settings** → **Networking** → **Generate Domain**  
-   Note the URL — it looks like `https://s2r2-api-production.up.railway.app`
+The Admin panel shows a live license card with:
+- Plan name + expiry date and time
+- Days + hours remaining (accurate calendar calculation)
+- Next plan upgrade suggestion
+- Direct contact link
 
-6. After deploy, run the seed once via Railway shell or locally pointing at the same DB:
+### Verify via health endpoint
+
 ```bash
-cd backend && npm run db:seed
+GET /health
+→ { "status": "ok", "trial": { "mode": "1-month plan", "expired": false, "daysRemaining": 33, ... } }
 ```
 
 ---
 
-### Step 2 — Deploy the Frontend on Vercel
+## Integrity & Ownership Protection
 
-1. Go to [vercel.com](https://vercel.com) → **New Project** → Import your GitHub repo
-2. Set **Root Directory** to `frontend`
-3. Framework preset will auto-detect **Next.js**
-4. Under **Environment Variables** add:
+| What is checked | When | On failure |
+|-----------------|------|-----------|
+| All required env vars present | Startup + every request | Server exits / 503 |
+| `OWNER_SIG` matches ownership signature | Startup + every request | Server exits / 503 |
+| PostgreSQL reachable | Startup | Server exits |
+| Footer branding constants intact | Frontend runtime | Full-screen lock with builder key bypass |
 
-```
-NEXT_PUBLIC_API_URL = https://<your-railway-api-url>
-```
+**Do not:**
+- Remove or change `OWNER_SIG` in `.env`
+- Delete or modify `backend/src/middleware/integrity.js`
+- Remove "Civitas Atlas Technologies" from `Footer.tsx`
 
-5. Click **Deploy**
-
-Vercel will build and deploy. The `next.config.js` rewrites proxy `/api/*` to your Railway backend automatically — no CORS issues.
-
----
-
-### Step 3 — Update Railway CORS after Vercel deploys
-
-Once Vercel gives you a final URL (e.g. `https://s2r2-inventory.vercel.app`), go back to Railway → Variables and update:
-
-```
-FRONTEND_URL = https://s2r2-inventory.vercel.app
-```
-
-Redeploy Railway (it auto-redeploys on variable change).
-
----
-
-### Railway Alternative: Render
-
-If you prefer [Render](https://render.com):
-
-1. New → **Web Service** → connect repo, set root to `backend`
-2. Build command: `npm install && npx prisma generate`
-3. Start command: `node server.js`
-4. Add the same env vars as Railway above
-5. Free tier spins down after inactivity — upgrade to avoid cold starts
+Builder override key available for Civitas Atlas team — contact civitasatlasco@gmail.com.
 
 ---
 
 ## API Reference
 
-Base URL: `http://localhost:4000` (local) or your Railway URL (production)
+Base URL: `http://localhost:4000`  
+Protected routes require: `Authorization: Bearer <token>`
 
-All protected routes require header: `Authorization: Bearer <token>`
-
-| Method | Route                         | Auth | Description              |
-|--------|-------------------------------|------|--------------------------|
-| POST   | `/api/auth/login`             | No   | Login, returns JWT       |
-| GET    | `/api/dashboard`              | Yes  | Stats summary            |
-| GET    | `/api/raw-materials`          | Yes  | List raw materials       |
-| POST   | `/api/raw-materials`          | Yes  | Create raw material      |
-| PUT    | `/api/raw-materials/:id`      | Yes  | Update raw material      |
-| DELETE | `/api/raw-materials/:id`      | Yes  | Delete raw material      |
-| GET    | `/api/finished-products`      | Yes  | List finished products   |
-| POST   | `/api/finished-products`      | Yes  | Create finished product  |
-| PUT    | `/api/finished-products/:id`  | Yes  | Update finished product  |
-| DELETE | `/api/finished-products/:id`  | Yes  | Delete finished product  |
-| GET    | `/api/clients`                | Yes  | List clients             |
-| POST   | `/api/clients`                | Yes  | Create client            |
-| PUT    | `/api/clients/:id`            | Yes  | Update client            |
-| DELETE | `/api/clients/:id`            | Yes  | Delete client            |
-| POST   | `/api/clients/import`         | Yes  | Bulk import from Excel   |
-| GET    | `/api/iot-devices`            | Yes  | List IoT devices         |
-| GET    | `/api/activity`               | Yes  | Recent activity log      |
-| GET    | `/api/users`                  | ADMIN| List users               |
-| POST   | `/api/users`                  | ADMIN| Create user              |
-| DELETE | `/api/users/:id`              | ADMIN| Delete user              |
-| GET    | `/health`                     | No   | Health check             |
+| Method | Route | Auth | Description |
+|--------|-------|------|-------------|
+| POST | `/api/auth/login` | No | Login, returns JWT |
+| GET | `/api/dashboard` | Yes | Stats summary |
+| GET/POST/PUT/DELETE | `/api/raw-materials` | Yes | Raw materials CRUD |
+| GET | `/api/raw-materials/export/pdf` | Yes | PDF export |
+| GET/POST/PUT/DELETE | `/api/finished-products` | Yes | Finished products CRUD |
+| GET | `/api/finished-products/export/pdf` | Yes | PDF export |
+| GET/POST/PUT/DELETE | `/api/clients` | Yes | Clients CRUD |
+| POST | `/api/clients/import` | Yes | Bulk Excel import |
+| GET | `/api/clients/export/pdf` | Yes | PDF export |
+| GET/POST/PUT/DELETE | `/api/iot-devices` | Yes | IoT devices CRUD |
+| PATCH | `/api/iot-devices/:id/ping` | Yes | Ping device |
+| GET | `/api/activity` | Yes | Activity log |
+| DELETE | `/api/activity` | ADMIN | Clear log |
+| GET/POST/PUT/DELETE | `/api/users` | ADMIN | User management |
+| POST | `/api/trial/activate` | No | Activate license key |
+| GET | `/health` | No | Health + trial status |
 
 ---
 
-## Database — Neon
+## Database Models
 
-Schema is managed via Prisma. To push changes:
-
-```bash
-cd backend
-npx prisma db push       # apply schema changes (no migration files)
-npx prisma migrate dev   # generate + apply migration files
-npx prisma studio        # visual DB browser
-```
-
-Models: `User`, `RawMaterial`, `FinishedProduct`, `Client`, `IoTDevice`, `ActivityLog`
+| Model | Description |
+|-------|-------------|
+| `User` | App users with role (ADMIN/EDITOR/VIEWER) |
+| `RawMaterial` | Raw material records with quantity, price, stock tracking |
+| `FinishedProduct` | Finished goods with qty, price, ACTIVE/HOLD status |
+| `Client` | Client records with GST, contact, status |
+| `IoTDevice` | IoT device registry with status and ping tracking |
+| `ActivityLog` | Audit trail of all create/update/delete actions |
 
 ---
 
 ## Role Permissions
 
-| Action         | ADMIN | EDITOR | VIEWER |
-|----------------|-------|--------|--------|
-| View all pages | ✅    | ✅     | ✅     |
-| Add records    | ✅    | ✅     | ❌     |
-| Edit records   | ✅    | ✅     | ❌     |
-| Delete records | ✅    | ❌     | ❌     |
-| Admin panel    | ✅    | ❌     | ❌     |
+| Action | ADMIN | EDITOR | VIEWER |
+|--------|-------|--------|--------|
+| View all pages | ✅ | ✅ | ✅ |
+| Add records | ✅ | ✅ | ❌ |
+| Edit records | ✅ | ✅ | ❌ |
+| Delete records | ✅ | ❌ | ❌ |
+| Admin panel | ✅ | ❌ | ❌ |
 
 ---
 
-## Scripts Reference
+## Scripts
 
 ```bash
 # Backend
-npm run dev          # nodemon dev server
-npm run start        # production server
-npm run db:push      # push schema to DB
-npm run db:seed      # seed users + sample data
-npm run db:studio    # Prisma Studio GUI
+npm run dev        # nodemon dev server :4000
+npm run start      # production server
+npm run db:push    # push schema to DB
+npm run db:seed    # seed users + sample data
+npm run db:studio  # Prisma Studio GUI
 
 # Frontend
-npm run dev          # Next.js dev server (port 3000)
-npm run build        # production build
-npm run start        # serve production build
-npm run lint         # ESLint check
+npm run dev        # Next.js dev server :3000
+npm run build      # production build
+npm run lint       # ESLint
 ```
 
 ---
 
-## Environment Variables — Full Reference
+## Contact & Support
 
-### Backend (`backend/.env`)
-
-| Variable       | Required | Description                              |
-|----------------|----------|------------------------------------------|
-| `DATABASE_URL` | Yes      | Neon pooled PostgreSQL connection string |
-| `DIRECT_URL`   | Yes      | Neon direct connection (for migrations)  |
-| `JWT_SECRET`   | Yes      | Secret key for signing JWT tokens        |
-| `PORT`         | No       | API port (default: 4000)                 |
-| `FRONTEND_URL` | Yes      | Frontend origin for CORS                 |
-
-### Frontend (`frontend/.env.local`)
-
-| Variable               | Required | Description              |
-|------------------------|----------|--------------------------|
-| `NEXT_PUBLIC_API_URL`  | Yes      | Backend API base URL     |
+**Civitas Atlas Technologies Pvt. Ltd.**, Pune, India  
+[civitasatlasco@gmail.com](mailto:civitasatlasco@gmail.com)
 
 ---
 
-*S2R2 Inventory Management System — Civitas Atlas Technologies Pvt. Ltd., Pune, India*
+*© Civitas Atlas Technologies Pvt. Ltd., Pune, India. All rights reserved.*

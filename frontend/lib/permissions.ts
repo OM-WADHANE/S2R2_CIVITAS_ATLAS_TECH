@@ -21,7 +21,8 @@ export type PermFeature =
   | "Delete Clients"
   | "Add / Edit IoT Devices"
   | "Delete IoT Devices"
-  | "Manage Users";
+  | "Manage Users"
+  | "View Pricing & Revenue";
 
 interface PermRow {
   feature: string;
@@ -46,6 +47,7 @@ const DEFAULT_PERMS: PermRow[] = [
   { feature: "Add / Edit IoT Devices",    admin: true,  editor: false, viewer: false },
   { feature: "Delete IoT Devices",        admin: true,  editor: false, viewer: false },
   { feature: "Manage Users",              admin: true,  editor: false, viewer: false },
+  { feature: "View Pricing & Revenue",    admin: true,  editor: true,  viewer: false },
 ];
 
 function getRole(): string {
@@ -133,4 +135,12 @@ export function usePermissions(module: "raw-material" | "finished-product" | "cl
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // intentionally no deps — reads fresh on each render via localStorage
+}
+
+/**
+ * canViewPricing — Returns true if user can see pricing, cost, and revenue information.
+ * Only ADMIN and EDITOR can view pricing. VIEWER cannot.
+ */
+export function canViewPricing(): boolean {
+  return can("View Pricing & Revenue");
 }

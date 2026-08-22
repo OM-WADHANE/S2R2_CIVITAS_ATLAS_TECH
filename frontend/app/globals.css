@@ -25,10 +25,6 @@
     @apply bg-gray-50 text-gray-900 min-h-screen;
   }
 
-  .dark body {
-    @apply bg-gray-950 text-gray-100;
-  }
-
   /* Smooth focus rings everywhere */
   :focus-visible {
     @apply outline-none ring-2 ring-blue-500 ring-offset-2;
@@ -53,34 +49,51 @@
   /* Mobile: off-canvas drawer */
   @media (max-width: 767px) {
     .app-sidebar {
-      @apply fixed z-50 min-h-screen;
-      /* sits below the floating header (top-3 + ~56px height + some gap) */
-      top: 4.5rem;
+      @apply fixed z-50;
+      top: 5rem;
       left: -100%;
-      width: 17rem;
+      width: 15rem;
       max-width: 85vw;
-      padding-top: 1rem;
-      height: calc(100vh - 4.5rem);
+      height: calc(100vh - 5rem);
+      overflow-y: auto;
+      transition: left 0.3s ease;
     }
     .app-sidebar.open { left: 0; }
   }
 
-  /* Desktop: collapsible rail */
+  /* Desktop: icon-only sidebar, expands on open */
   @media (min-width: 768px) {
     .app-sidebar {
-      width: 17rem;
-      min-width: 17rem;
-      flex-shrink: 0;
-      overflow: hidden;
-    }
-    .app-sidebar.collapsed {
+      @apply fixed;
+      top: 0;
+      left: 0;
       width: 4.5rem;
       min-width: 4.5rem;
+      height: 100vh;
+      overflow-y: auto;
+      z-index: 30;
+      padding-top: 5.5rem;
+      transition: width 0.3s ease, min-width 0.3s ease;
     }
-    .app-sidebar.collapsed .nav-label    { opacity: 0; max-width: 0; overflow: hidden; }
-    .app-sidebar.collapsed .nav-icon     { margin-right: 0 !important; }
-    .app-sidebar.collapsed .nav-link     { @apply justify-center; }
-    .app-sidebar.collapsed .sidebar-title{ opacity: 0; }
+    .app-sidebar.open {
+      width: 15rem;
+      min-width: 15rem;
+    }
+    /* Collapsed: hide labels */
+    .app-sidebar:not(.open) .nav-label { 
+      opacity: 0; 
+      max-width: 0; 
+      overflow: hidden; 
+    }
+    .app-sidebar:not(.open) .nav-icon { 
+      margin-right: 0 !important; 
+    }
+    .app-sidebar:not(.open) .nav-link { 
+      @apply justify-center; 
+    }
+    .app-sidebar:not(.open) .sidebar-title { 
+      opacity: 0; 
+    }
   }
 
   .nav-label {
@@ -91,7 +104,7 @@
 
   /* ── Nav link active / hover ──────────────────────────────── */
   .nav-link {
-    @apply flex items-center p-3 rounded-xl transition-all text-sm font-medium
+    @apply flex items-center p-2.5 rounded-xl transition-all text-sm font-medium
            text-gray-600 hover:bg-blue-50 hover:text-blue-700
            dark:text-gray-300 dark:hover:bg-blue-900/30 dark:hover:text-blue-400;
   }

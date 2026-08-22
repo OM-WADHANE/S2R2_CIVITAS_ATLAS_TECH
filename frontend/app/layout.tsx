@@ -6,12 +6,21 @@ import Footer from "@/components/Footer";
 export const metadata: Metadata = {
   title:       "S2R2 Inventory Management",
   description: "IoT & Inventory Management Dashboard — S2R2 Technologies",
+  icons: {
+    icon:     [{ url: "/favicon-circle.png", type: "image/png" }],
+    apple:    [{ url: "/favicon-circle.png", type: "image/png" }],
+    shortcut:   "/favicon-circle.png",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        {/* Favicon — circular S2R2 logo on browser tab */}
+        <link rel="icon"            type="image/png" href="/favicon-circle.png" />
+        <link rel="shortcut icon"   type="image/png" href="/favicon-circle.png" />
+        <link rel="apple-touch-icon"                 href="/favicon-circle.png" />
         {/*
           Runs synchronously before first paint — applies saved dark/light class
           to prevent white flash on hard reload in dark mode.

@@ -21,6 +21,8 @@ function downloadBlob(blob: Blob, filename: string) {
 }
 
 // ─── export helpers ────────────────────────────────────────────
+const BRAND = "Generated using Civi API | By Civitas Atlas Co, Pune";
+
 function clientRows(list: Client[]) {
   return list.map(c => ({
     ID: c.id, "Client Name": c.clientName, Company: c.companyName ?? "",
@@ -30,14 +32,19 @@ function clientRows(list: Client[]) {
   }));
 }
 function exportCsv(list: Client[]) {
-  import("papaparse").then(({ default: Papa }) =>
-    downloadBlob(new Blob([Papa.unparse(clientRows(list))], { type: "text/csv;charset=utf-8;" }), "clients.csv")
-  );
+  import("papaparse").then(({ default: Papa }) => {
+    // branding line + blank line + data
+    const csv = BRAND + "\n\n" + Papa.unparse(clientRows(list));
+    downloadBlob(new Blob([csv], { type: "text/csv;charset=utf-8;" }), "clients.csv");
+  });
 }
 async function exportXlsx(list: Client[]) {
   const XLSX = await import("xlsx");
+  // branding row at top, blank separator, then data
+  const ws = XLSX.utils.aoa_to_sheet([[BRAND], []]);
+  XLSX.utils.sheet_add_json(ws, clientRows(list), { origin: -1 });
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(clientRows(list)), "Clients");
+  XLSX.utils.book_append_sheet(wb, ws, "Clients");
   downloadBlob(new Blob([XLSX.write(wb, { type: "array", bookType: "xlsx" })], {
     type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
   }), "clients.xlsx");
@@ -53,6 +60,8 @@ function exportPdf() {
 async function downloadTemplate() {
   const XLSX = await import("xlsx");
   const ws = XLSX.utils.aoa_to_sheet([
+    [BRAND],
+    [],
     ["Client Name","Company","Phone","Email","Address","GST No"],
     ["Tata Motors","Tata Motors Ltd","9876543210","contact@tata.com","Pune, MH","27AAACT2727Q1ZW"],
     ["Sample Client","Sample Co","9000000000","sample@email.com","Mumbai, MH",""],
@@ -100,7 +109,9 @@ export default function ClientsPage() {
   const [status,   setStatus]   = useState("");
   const [loading,  setLoading]  = useState(true);
   const [saving,   setSaving]   = useState(false);
-  const [view,     setView]     = useState<"grid"|"table">("grid");
+  const [view,     setView]     = useState<"grid"|"table">(() => 
+    (localStorage.getItem("s2r2_view_mode") as "grid" | "table") || "grid"
+  );
 
   // ─── add / edit modal ─────────────────────────────────────
   const [modal, setModal] = useState<Partial<Client> | null>(null);
@@ -246,7 +257,10 @@ export default function ClientsPage() {
             </select>
             <div className="flex rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 shrink-0">
               {(["grid","table"] as const).map(v => (
-                <button key={v} onClick={() => setView(v)}
+                <button key={v} onClick={() => {
+                  setView(v);
+                  localStorage.setItem("s2r2_view_mode", v);
+                }}
                   className={`px-3 py-2 text-xs font-semibold transition capitalize ${
                     view === v ? "bg-purple-600 text-white"
                     : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
