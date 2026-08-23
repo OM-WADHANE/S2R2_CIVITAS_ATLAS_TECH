@@ -5,19 +5,17 @@ RUN apk add --no-cache openssl libc6-compat
 
 WORKDIR /app
 
-# Copy package files and prisma schema first (better layer caching)
+# Copy package files and prisma schema first (layer caching)
 COPY package*.json ./
 COPY prisma ./prisma/
 
-# Install all dependencies and generate Prisma client
+# Install dependencies and pre-generate Prisma client
 RUN npm ci && npx prisma generate
 
 # Copy the rest of the source code
 COPY . .
 
-# Expose API port
 EXPOSE 4000
 
-# Run migrations then start server
-# DATABASE_URL and DIRECT_URL must be set as environment variables at runtime
+# At runtime: migrate (uses DIRECT_URL) then start server
 CMD ["sh", "-c", "npx prisma migrate deploy && node server.js"]
