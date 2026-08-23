@@ -56,10 +56,11 @@ const EXPECTED_SIG = crypto
   .digest("hex");
 
 // Required env vars — app cannot start without these
+// NOTE: FRONTEND_URL is NOT here — it has a safe default (localhost:3000)
+// and should never crash the server if missing during cold-start on Railway.
 const REQUIRED_ENV = [
   "DATABASE_URL",
   "JWT_SECRET",
-  "FRONTEND_URL",
   "OWNER_SIG",
 ];
 

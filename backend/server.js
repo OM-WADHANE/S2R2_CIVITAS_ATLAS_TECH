@@ -33,12 +33,18 @@ const app    = express();
 const prisma = new PrismaClient();
 const PORT   = process.env.PORT || 4000;
 
+// FRONTEND_URL — warn if missing but never crash; defaults to localhost:3000
+const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3000";
+if (!process.env.FRONTEND_URL) {
+  console.warn("[server] FRONTEND_URL not set — defaulting to http://localhost:3000 (CORS)");
+}
+
 // ── Middleware ────────────────────────────────────────────────
 const { apiLimiter, authLimiter, validateTrialExpiry, validateRequest, requestSizeLimit } = require("./src/middleware/security");
 
 app.use(helmet());
 app.use(cors({
-  origin: process.env.FRONTEND_URL || "http://localhost:3000",
+  origin: FRONTEND_URL,
   credentials: true,
 }));
 app.use(requestSizeLimit);
