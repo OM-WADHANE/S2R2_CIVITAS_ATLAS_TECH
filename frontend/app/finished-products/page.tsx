@@ -1,4 +1,5 @@
 "use client";
+export const dynamic = "force-dynamic";
 // app/finished-products/page.tsx — Full CRUD + Inward/Outward/Manufacture + Excel Import + BOM in modal
 import { useEffect, useState, useCallback, useRef } from "react";
 import AppShell from "@/components/AppShell";
@@ -109,8 +110,8 @@ export default function FinishedProductsPage() {
   const [stockFilter,  setStockFilter]  = useState("");
   const [loading,      setLoading]      = useState(true);
   const [saving,       setSaving]       = useState(false);
-  const [view,         setView]         = useState<"grid" | "table">(() => 
-    (localStorage.getItem("s2r2_view_mode") as "grid" | "table") || "grid"
+  const [view,         setView]         = useState<"grid" | "table">(
+    () => (typeof window !== "undefined" ? localStorage.getItem("s2r2_view_mode") as "grid" | "table" : null) || "grid"
   );
   const [modal,        setModal]        = useState<Partial<FinishedProduct> | null>(null);
   const [isNew,        setIsNew]        = useState(false);

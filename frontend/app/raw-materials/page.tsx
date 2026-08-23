@@ -1,4 +1,5 @@
 "use client";
+export const dynamic = "force-dynamic";
 // app/raw-materials/page.tsx — Full CRUD + Inward/Outward + Excel Import + Export
 import { useEffect, useState, useCallback, useRef } from "react";
 import AppShell from "@/components/AppShell";
@@ -95,8 +96,8 @@ export default function RawMaterialsPage() {
   const [status,   setStatus]   = useState("");
   const [loading,  setLoading]  = useState(true);
   const [saving,   setSaving]   = useState(false);
-  const [view,     setView]     = useState<"grid" | "table">(() => 
-    (localStorage.getItem("s2r2_view_mode") as "grid" | "table") || "grid"
+  const [view,     setView]     = useState<"grid" | "table">(
+    () => (typeof window !== "undefined" ? localStorage.getItem("s2r2_view_mode") as "grid" | "table" : null) || "grid"
   );
   const [modal,    setModal]    = useState<Partial<typeof EMPTY & { id?: number; status?: string }> | null>(null);
   const [isNew,    setIsNew]    = useState(false);

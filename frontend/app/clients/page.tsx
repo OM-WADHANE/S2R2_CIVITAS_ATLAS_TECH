@@ -1,4 +1,5 @@
 "use client";
+export const dynamic = "force-dynamic";
 
 // app/clients/page.tsx — Full CRUD + Excel Import + CSV / Excel / PDF Export
 import { useEffect, useState, useCallback, useRef } from "react";
@@ -109,8 +110,8 @@ export default function ClientsPage() {
   const [status,   setStatus]   = useState("");
   const [loading,  setLoading]  = useState(true);
   const [saving,   setSaving]   = useState(false);
-  const [view,     setView]     = useState<"grid"|"table">(() => 
-    (localStorage.getItem("s2r2_view_mode") as "grid" | "table") || "grid"
+  const [view,     setView]     = useState<"grid"|"table">(
+    () => (typeof window !== "undefined" ? localStorage.getItem("s2r2_view_mode") as "grid" | "table" : null) || "grid"
   );
 
   // ─── add / edit modal ─────────────────────────────────────

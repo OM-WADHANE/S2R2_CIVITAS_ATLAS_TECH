@@ -1,4 +1,5 @@
 "use client";
+export const dynamic = "force-dynamic";
 // app/bom/page.tsx — Bill of Materials management
 // Visible to ADMIN and EDITOR only — hidden from VIEWER via Sidebar.
 import { useEffect, useState, useCallback } from "react";

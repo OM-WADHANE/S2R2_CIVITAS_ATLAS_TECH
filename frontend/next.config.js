@@ -1,20 +1,16 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Performance optimizations
   reactStrictMode: true,
-  swcMinify: true,
-  
-  // Optimize images
+
   images: {
     formats: ['image/webp'],
   },
 
-  // Reduce build overhead
   typescript: {
     ignoreBuildErrors: false,
   },
 
-  // Proxy /api/* and /health → Express backend (no CORS needed)
+  // Proxy /api/* and /health → Express backend (no CORS needed in production)
   async rewrites() {
     return [
       {

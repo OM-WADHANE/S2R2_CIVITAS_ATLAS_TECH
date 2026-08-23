@@ -1,4 +1,5 @@
 "use client";
+export const dynamic = "force-dynamic";
 // Civi AI Chat Assistant — Civitas Atlas Technologies Pvt. Ltd., Pune
 import { useState, useRef, useEffect } from "react";
 import AppShell from "@/components/AppShell";

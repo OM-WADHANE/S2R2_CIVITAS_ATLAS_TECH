@@ -1,4 +1,5 @@
 "use client";
+export const dynamic = "force-dynamic";
 // app/notifications/page.tsx
 // Not in the sidebar nav — accessed only via the bell icon in the header.
 // Shows all stock alerts grouped by urgency with action links.

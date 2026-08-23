@@ -1,4 +1,5 @@
 "use client";
+export const dynamic = "force-dynamic";
 
 // app/admin/page.tsx — User management + editable live permission grid
 import { useEffect, useState, useCallback } from "react";
@@ -45,6 +46,7 @@ const DEFAULT_PERMS: { feature: string; admin: boolean; editor: boolean; viewer:
   { feature: "Add / Edit IoT Devices",    admin: true,  editor: false, viewer: false },
   { feature: "Delete IoT Devices",        admin: true,  editor: false, viewer: false },
   { feature: "Manage Users",              admin: true,  editor: false, viewer: false },
+  { feature: "View Pricing & Revenue",    admin: true,  editor: true,  viewer: false },
 ];
 
 const PERM_KEY = "s2r2_permissions";

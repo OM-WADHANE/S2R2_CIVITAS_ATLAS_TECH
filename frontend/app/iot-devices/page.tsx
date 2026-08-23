@@ -1,4 +1,5 @@
 "use client";
+export const dynamic = "force-dynamic";
 // app/iot-devices/page.tsx
 import { useEffect, useState, useCallback } from "react";
 import AppShell from "@/components/AppShell";

@@ -1,4 +1,5 @@
 "use client";
+export const dynamic = "force-dynamic";
 // app/trial-expired/page.tsx
 // Shown when the backend returns HTTP 402 TRIAL_EXPIRED.
 // Users enter the license key here. On success the in-memory expiry is

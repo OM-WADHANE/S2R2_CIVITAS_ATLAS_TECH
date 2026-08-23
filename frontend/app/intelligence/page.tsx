@@ -1,4 +1,5 @@
 "use client";
+export const dynamic = "force-dynamic";
 // app/intelligence/page.tsx
 // Civi AI — Decision Intelligence
 // Powered by Civitas Atlas Technologies Pvt. Ltd., Pune

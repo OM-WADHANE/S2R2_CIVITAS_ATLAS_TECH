@@ -1,4 +1,5 @@
 "use client";
+export const dynamic = "force-dynamic";
 // app/page.tsx — Dashboard with 4 tabs
 import { useEffect, useState, useCallback } from "react";
 import AppShell from "@/components/AppShell";
